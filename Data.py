@@ -50,11 +50,11 @@ def fetch_options_data_on(symbol, expiry_type, date, qdap = True, t = 0):
     cursor.execute(
         f'''
                 SELECT *
-                FROM ohlcv_options_per_minute oopm
+                FROM {table_name} oopm
                 WHERE oopm.symbol = '{symbol}'
                 AND DATE(oopm.date_timestamp) = '{date}'
                 AND oopm.expiry_type = '{expiry_type}'
-                ;
+                ORDER BY date_timestamp ASC;
             '''
     )
     rows = cursor.fetchall()
@@ -62,119 +62,119 @@ def fetch_options_data_on(symbol, expiry_type, date, qdap = True, t = 0):
     conn.close()
     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
     return df
-
-
-def fetch_options_data(symbol, expiry, expiry_type, qdap = True, t = 0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s-{expiry_type} Options Data from {Database}, Timeframe = {t}mins, expiry: {expiry}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} oopm
-            WHERE oopm.symbol = '{symbol}'
-            AND DATE(oopm.expiry) = '{expiry}'
-            AND oopm.expiry_type = '{expiry_type}'
-            ORDER BY date_timstamp ASC;
-        '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} options fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                         f'HAVING_EXPIRY_{expiry}', FNO.OPTIONS)
-    return df
-
-def fetch_options_data_on_expiry(symbol, expiry, expiry_type, qdap = True, t = 0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s 0-DTE {expiry_type}-Options Data from {Database}, Timeframe = {t}mins, expiry {expiry}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} oopm
-            WHERE oopm.symbol = '{symbol}'
-            AND DATE(oopm.date_timestamp) = '{expiry}'
-            AND DATE(oopm.expiry) = '{expiry}'
-            AND oopm.expiry_type = '{expiry_type}'
-            ORDER BY date_timstamp ASC;
-        '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} options fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                         f'ON_{expiry}', FNO.OPTIONS)
-    return df
-
-def fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, qdap = True, t = 0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s {expiry_type}-Options Data from {Database}, Timeframe = {t}mins, expiries between start date: {start_date} - end date: {end_date}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} oopm
-            WHERE oopm.symbol = '{symbol}' 
-            AND oopm.expiry_type = '{expiry_type}'
-            AND DATE(oopm.expiry) <= '{end_date}'
-            AND DATE(oopm.expiry) >= '{start_date}'
-            ORDER BY date_timestamp ASC;
-        '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} options fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                              f'EXPIRY_BETWEEN_{start_date}_{end_date}', FNO.OPTIONS)
-    return df
-
-def fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, qdap = True, t = 0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s {expiry_type}-Options Data from {Database}, Timeframe = {t}mins, timestamps between start date: {start_date} - end date: {end_date}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} oopm
-            WHERE oopm.symbol = '{symbol}' 
-            AND oopm.expiry_type = '{expiry_type}'
-            AND DATE(oopm.date_timestamp) <= '{end_date}'
-            AND DATE(oopm.date_timestamp) >= '{start_date}'
-            ORDER BY date_timestamp ASC;
-        '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} options fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                         f'TIMESTAMPS_BETWEEN_{start_date}_{end_date}', FNO.OPTIONS)
-    return df
-
+#
+#
+# def fetch_options_data(symbol, expiry, expiry_type, qdap = True, t = 0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s-{expiry_type} Options Data from {Database}, Timeframe = {t}mins, expiry: {expiry}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} oopm
+#             WHERE oopm.symbol = '{symbol}'
+#             AND DATE(oopm.expiry) = '{expiry}'
+#             AND oopm.expiry_type = '{expiry_type}'
+#             ORDER BY date_timestamp ASC;
+#         '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} options fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                          f'HAVING_EXPIRY_{expiry}', FNO.OPTIONS)
+#     return df
+#
+# def fetch_options_data_on_expiry(symbol, expiry, expiry_type, qdap = True, t = 0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s 0-DTE {expiry_type}-Options Data from {Database}, Timeframe = {t}mins, expiry {expiry}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} oopm
+#             WHERE oopm.symbol = '{symbol}'
+#             AND DATE(oopm.date_timestamp) = '{expiry}'
+#             AND DATE(oopm.expiry) = '{expiry}'
+#             AND oopm.expiry_type = '{expiry_type}'
+#             ORDER BY date_timestamp ASC;
+#         '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} options fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                          f'ON_{expiry}', FNO.OPTIONS)
+#     return df
+#
+# def fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, qdap = True, t = 0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s {expiry_type}-Options Data from {Database}, Timeframe = {t}mins, expiries between start date: {start_date} - end date: {end_date}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} oopm
+#             WHERE oopm.symbol = '{symbol}'
+#             AND oopm.expiry_type = '{expiry_type}'
+#             AND DATE(oopm.expiry) <= '{end_date}'
+#             AND DATE(oopm.expiry) >= '{start_date}'
+#             ORDER BY date_timestamp ASC;
+#         '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} options fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                               f'EXPIRY_BETWEEN_{start_date}_{end_date}', FNO.OPTIONS)
+#     return df
+#
+# def fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, qdap = True, t = 0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s {expiry_type}-Options Data from {Database}, Timeframe = {t}mins, timestamps between start date: {start_date} - end date: {end_date}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_options_per_minute" if t == 0 else f"ohlcv_options_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} oopm
+#             WHERE oopm.symbol = '{symbol}'
+#             AND oopm.expiry_type = '{expiry_type}'
+#             AND DATE(oopm.date_timestamp) <= '{end_date}'
+#             AND DATE(oopm.date_timestamp) >= '{start_date}'
+#             ORDER BY date_timestamp ASC;
+#         '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} options fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                          f'TIMESTAMPS_BETWEEN_{start_date}_{end_date}', FNO.OPTIONS)
+#     return df
+#
 
 
 
@@ -200,14 +200,16 @@ def fetch_futures_data_on(symbol, expiry_type, date, qdap = True, t = 0):
         raise "Please Enter the timeframe of Data when fetching from local database"
     cursor, conn = make_connection_to_db(qdap)
     table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
+    if qdap:
+        print("fetching from qdap")
     cursor.execute(
         f'''
                 SELECT *
-                FROM ohlcv_future_per_minute ofpm
+                FROM {table_name} ofpm
                 WHERE ofpm.symbol = '{symbol}'
                 AND DATE(ofpm.date_timestamp) = '{date}'
                 AND ofpm.expiry_type = '{expiry_type}'
-                ;
+                ORDER BY date_timestamp ASC;
             '''
     )
     rows = cursor.fetchall()
@@ -215,92 +217,92 @@ def fetch_futures_data_on(symbol, expiry_type, date, qdap = True, t = 0):
     conn.close()
     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
     return df
-
-def fetch_futures_data(symbol, expiry, expiry_type, qdap = True, t = 0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s-{expiry_type} Futures Data from {Database}, Timeframe = {t}mins, expiry: {expiry}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} ofpm
-            WHERE ofpm.symbol = '{symbol}'
-            AND DATE(ofpm.expiry) = '{expiry}'
-            AND ofpm.expiry_type = '{expiry_type}'
-            ORDER BY date_timstamp ASC;
-        '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} options fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                         f'HAVING_EXPIRY_{expiry}', FNO.FUTURES)
-    return df
-
-
-def fetch_futures_data_on_expiry(symbol, expiry, expiry_type, qdap = True, t = 0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s 0-DTE {expiry_type}-Futures Data from {Database}, Timeframe = {t}mins, expiry {expiry}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} ofpm
-            WHERE ofpm.symbol = '{symbol}'
-            AND DATE(ofpm.date_timestamp) = '{expiry}'
-            AND DATE(ofpm.expiry) = '{expiry}'
-            AND ofpm.expiry_type = '{expiry_type}'
-            ORDER BY date_timstamp ASC;
-            '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} options fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                         f'ON_{expiry}', FNO.FUTURES)
-    return df
-
-# FUNCTION THAT RETRIEVES FUTURES DATA IN BETWEEN A PARTICULAR START DATE AND END DATE
-def fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, qdap = True, t=0):
-    if not qdap and t == 0:
-        raise "Please Enter the timeframe of Data when fetching from local database"
-    Database = "QDAP" if qdap else "Local Database"
-    print(f"Fetching {symbol}'s {expiry_type}-Futures Data from {Database}, Timeframe = {t}mins, expiries between start date: {start_date} - end date: {end_date}")
-    cursor, conn = make_connection_to_db(qdap)
-    table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
-    cursor.execute(
-        f'''
-            SELECT *
-            FROM {table_name} ofpm
-            WHERE ofpm.symbol = '{symbol}'
-            AND ofpm.expiry_type = '{expiry_type}'
-            AND DATE(ofpm.expiry) >= '{start_date}'
-            AND DATE(ofpm.expiry) <= '{end_date}'
-            ORDER BY date_timestamp ASC;
-        '''
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
-    if not df.empty:
-        print(f'{symbol} futures fetched')
-        save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
-                              f'EXPIRY_BETWEEN_{start_date}_{end_date}', FNO.FUTURES)
-    return df
-
+#
+# def fetch_futures_data(symbol, expiry, expiry_type, qdap = True, t = 0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s-{expiry_type} Futures Data from {Database}, Timeframe = {t}mins, expiry: {expiry}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} ofpm
+#             WHERE ofpm.symbol = '{symbol}'
+#             AND DATE(ofpm.expiry) = '{expiry}'
+#             AND ofpm.expiry_type = '{expiry_type}'
+#             ORDER BY date_timestamp ASC;
+#         '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} options fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                          f'HAVING_EXPIRY_{expiry}', FNO.FUTURES)
+#     return df
+#
+#
+# def fetch_futures_data_on_expiry(symbol, expiry, expiry_type, qdap = True, t = 0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s 0-DTE {expiry_type}-Futures Data from {Database}, Timeframe = {t}mins, expiry {expiry}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} ofpm
+#             WHERE ofpm.symbol = '{symbol}'
+#             AND DATE(ofpm.date_timestamp) = '{expiry}'
+#             AND DATE(ofpm.expiry) = '{expiry}'
+#             AND ofpm.expiry_type = '{expiry_type}'
+#             ORDER BY date_timstamp ASC;
+#             '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} options fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                          f'ON_{expiry}', FNO.FUTURES)
+#     return df
+#
+# # FUNCTION THAT RETRIEVES FUTURES DATA IN BETWEEN A PARTICULAR START DATE AND END DATE
+# def fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, qdap = True, t=0):
+#     if not qdap and t == 0:
+#         raise "Please Enter the timeframe of Data when fetching from local database"
+#     Database = "QDAP" if qdap else "Local Database"
+#     print(f"Fetching {symbol}'s {expiry_type}-Futures Data from {Database}, Timeframe = {t}mins, expiries between start date: {start_date} - end date: {end_date}")
+#     cursor, conn = make_connection_to_db(qdap)
+#     table_name = "ohlcv_future_per_minute" if t == 0 else f"ohlcv_future_per_{t}_minute"
+#     cursor.execute(
+#         f'''
+#             SELECT *
+#             FROM {table_name} ofpm
+#             WHERE ofpm.symbol = '{symbol}'
+#             AND ofpm.expiry_type = '{expiry_type}'
+#             AND DATE(ofpm.expiry) >= '{start_date}'
+#             AND DATE(ofpm.expiry) <= '{end_date}'
+#             ORDER BY date_timestamp ASC;
+#         '''
+#     )
+#     rows = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+#     if not df.empty:
+#         print(f'{symbol} futures fetched')
+#         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
+#                               f'EXPIRY_BETWEEN_{start_date}_{end_date}', FNO.FUTURES)
+#     return df
+#
 # def fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, qdap = True, t = 0):
 #     if not qdap and t == 0:
 #         raise "Please Enter the timeframe of Data when fetching from local database"
@@ -328,19 +330,7 @@ def fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_
 #         save_df_in_folder_as(df, f'{symbol}_{expiry_type}',
 #                          f'TIMESTAMPS_BETWEEN_{start_date}_{end_date}', FNO.FUTURES)
 #     return df
-
-def fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t=1):
-    expected_date_range = pd.date_range(start=start_date, end=end_date, freq='B')
-    expected_date_range = get_market_valid_days(expected_date_range)
-    dfs = []
-    for date in expected_date_range:
-        df = get_futures_data_on(symbol, expiry_type, date, t)
-        df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
-        dfs.append(df)
-    df = pd.concat(dfs, ignore_index=True)
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
-    print("-----------------------------------------------------------------")
-    return df_resampled
+#
 
 
 
@@ -393,126 +383,132 @@ def fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, 
 
 
 def get_options_data_on(symbol, expiry_type, date, t = 1):
+    date = pd.to_datetime(date).date()
+
     try:
         df = fetch_options_data_on(symbol, expiry_type, date, False, t)
         if not df.empty:
-            print("-----------------------------------------------------------------")
+            # print("-----------------------------------------------------------------")
             return df
         else:
             raise f"empty data returned from local database for {t}min timeframe"
     except:
-        df = fetch_options_data(symbol, expiry_type, date, False, 1)
+        df = fetch_options_data_on(symbol, expiry_type, date, False, 1)
 
     if df.empty:
-        df = fetch_options_data(symbol, expiry_type, date, True)
+        df = fetch_options_data_on(symbol, expiry_type, date, True)
         insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
 
     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
     insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
     print("-----------------------------------------------------------------")
     return df_resampled
+#
+# def get_options_data(symbol, expiry_type, expiry, t=1):
+#     try:
+#         df = fetch_options_data(symbol, expiry_type, expiry, False, t)
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_options_data(symbol, expiry_type, expiry, False, 1)
+#
+#     if df.empty:
+#         df = fetch_options_data(symbol, expiry_type, expiry, True)
+#         insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
+#     insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
+#
+#
+# def get_options_data_on_expiry(symbol, expiry_type, expiry, t=1):
+#     try:
+#         df = fetch_options_data_on_expiry(symbol, expiry_type, expiry, False, t)
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_options_data_on_expiry(symbol, expiry_type, expiry, False, 1)
+#
+#     if df.empty:
+#         df = fetch_options_data_on_expiry(symbol, expiry_type, expiry, True)
+#         insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
+#     insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
+#
+#
+# def get_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, t=1):
+#     try:
+#         df = fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, t)
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, 1)
+#
+#     if df.empty:
+#         df = fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, True)
+#         insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
+#     insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
 
-def get_options_data(symbol, expiry_type, expiry, t=1):
-    try:
-        df = fetch_options_data(symbol, expiry_type, expiry, False, t)
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_options_data(symbol, expiry_type, expiry, False, 1)
-
-    if df.empty:
-        df = fetch_options_data(symbol, expiry_type, expiry, True)
-        insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
-
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
-    insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
-
-
-def get_options_data_on_expiry(symbol, expiry_type, expiry, t=1):
-    try:
-        df = fetch_options_data_on_expiry(symbol, expiry_type, expiry, False, t)
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_options_data_on_expiry(symbol, expiry_type, expiry, False, 1)
-
-    if df.empty:
-        df = fetch_options_data_on_expiry(symbol, expiry_type, expiry, True)
-        insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
-
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
-    insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
-
-
-def get_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, t=1):
-    try:
-        df = fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, t)
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, 1)
-
-    if df.empty:
-        df = fetch_options_data_with_expiry_between(symbol, expiry_type, start_date, end_date, True)
-        insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
-
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
-    insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
-
+#
+# def get_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t=1):
+#     # expected_date_range = pd.date_range(start=start_date, end=end_date, freq='B')
+#     # expected_date_range = get_market_valid_days(expected_date_range)
+#     # missing_dates = expected_date_range
+#     # try:
+#     #     df = fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False, t)
+#     #     df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
+#     #     df_dates = df['date_timestamp'].dt.date
+#     #     missing_dates = expected_date_range.difference(pd.to_datetime(df_dates))
+#     #     if not missing_dates.empty:
+#     #         print("-----------------------------------------------------------------")
+#     #         return df
+#     #     else:
+#     #         raise f"empty data returned from local database for {t}min timeframe"
+#     # except:
+#     df = fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False, 1)
+#
+#     if df.empty:
+#         df = fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, True)
+#         insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
+#     # insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
 
 def get_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t=1):
-    # expected_date_range = pd.date_range(start=start_date, end=end_date, freq='B')
-    # expected_date_range = get_market_valid_days(expected_date_range)
-    # missing_dates = expected_date_range
-    # try:
-    #     df = fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False, t)
-    #     df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
-    #     df_dates = df['date_timestamp'].dt.date
-    #     missing_dates = expected_date_range.difference(pd.to_datetime(df_dates))
-    #     if not missing_dates.empty:
-    #         print("-----------------------------------------------------------------")
-    #         return df
-    #     else:
-    #         raise f"empty data returned from local database for {t}min timeframe"
-    # except:
-    df = fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False, 1)
-
-    if df.empty:
-        df = fetch_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, True)
-        insert_data_into_local_database(df, 'ohlcv_options_per_1_minute')
-
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
-    # insert_data_into_local_database(df_resampled, f'ohlcv_options_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
-
-def get_options_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t=1):
+    print(f"Fetching {symbol}'s-{expiry_type} Options Data, Timeframe = {t}mins, start : {start_date}, end : {end_date}")
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
     expected_date_range = pd.date_range(start=start_date, end=end_date, freq='B')
     expected_date_range = get_market_valid_days(expected_date_range)
     dfs = []
     for date in expected_date_range:
-        df = get_options_data_on(symbol, expiry_type, date, t)
+        print(date)
+        df = get_options_data_on(symbol, expiry_type, date.date(), t)
         df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
         dfs.append(df)
     df = pd.concat(dfs, ignore_index=True)
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
+    # df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.OPTIONS)
     print("-----------------------------------------------------------------")
-    return df_resampled
+    return df
 
 
 '---------------------------------------'
@@ -533,18 +529,19 @@ def get_options_data_with_timestamps_between(symbol, expiry_type, start_date, en
 
 
 def get_futures_data_on(symbol, expiry_type, date, t = 1):
+    date = pd.to_datetime(date).date()
     try:
         df = fetch_futures_data_on(symbol, expiry_type, date, False, t)
         if not df.empty:
-            print("-----------------------------------------------------------------")
             return df
         else:
             raise f"empty data returned from local database for {t}min timeframe"
     except:
-        df = fetch_futures_data(symbol, expiry_type, date, False, 1)
+        print("-----------------------------------------------------------------")
+        df = fetch_futures_data_on(symbol, expiry_type, date, False, 1)
 
     if df.empty:
-        df = fetch_futures_data(symbol, expiry_type, date, True)
+        df = fetch_futures_data_on(symbol, expiry_type, date, True)
         insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
 
     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
@@ -553,87 +550,105 @@ def get_futures_data_on(symbol, expiry_type, date, t = 1):
     return df_resampled
 
 
-def get_futures_data(symbol, expiry_type, expiry, t=1):
-    try:
-        df = fetch_futures_data(symbol, expiry_type, expiry, False, t)
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_futures_data(symbol, expiry_type, expiry, False, 1)
+# def get_futures_data(symbol, expiry_type, expiry, t=1):
+#     try:
+#         df = fetch_futures_data(symbol, expiry_type, expiry, False, t)
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_futures_data(symbol, expiry_type, expiry, False, 1)
+#
+#     if df.empty:
+#         df = fetch_futures_data(symbol, expiry_type, expiry, True)
+#         insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
+#     insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
+#
+#
+# def get_futures_data_on_expiry(symbol, expiry_type, expiry, t=1):
+#     try:
+#         df = fetch_futures_data_on_expiry(symbol, expiry_type, expiry, False, t)
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_futures_data_on_expiry(symbol, expiry_type, expiry, False, 1)
+#
+#     if df.empty:
+#         df = fetch_futures_data_on_expiry(symbol, expiry_type, expiry, True)
+#         insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
+#     insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
+#
+#
+# def get_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, t=1):
+#     try:
+#         df = fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, t)
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, 1)
+#
+#     if df.empty:
+#         df = fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, True)
+#         insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
+#
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
+#     insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
 
-    if df.empty:
-        df = fetch_futures_data(symbol, expiry_type, expiry, True)
-        insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
 
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
-    insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
+# def get_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t = 1):
+#     try:
+#         df = fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False, t)
+#
+#         if not df.empty:
+#             print("-----------------------------------------------------------------")
+#             return df
+#         else:
+#             raise f"empty data returned from local database for {t}min timeframe"
+#     except:
+#         df = fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False)
+#     if df.empty:
+#         df = fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, True)
+#         insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
+#     df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
+#     # insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
+#     print("-----------------------------------------------------------------")
+#     return df_resampled
+
+def get_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t=1):
+    expected_date_range = pd.date_range(start=start_date, end=end_date, freq='B')
+    expected_date_range = get_market_valid_days(expected_date_range)
+    dfs = []
+    print(f"Fetching {symbol}'s-{expiry_type} Futures Data, Timeframe = {t}mins, start : {start_date}, end : {end_date}")
+
+    for date in expected_date_range:
+        print("-----------------------------------------------------------------")
+        print(date)
+        df = get_futures_data_on(symbol, expiry_type, date.date(), t)
+        df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
+        dfs.append(df)
+    df = pd.concat(dfs, ignore_index=True)
+    # df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
     print("-----------------------------------------------------------------")
-    return df_resampled
+    return df
 
-
-def get_futures_data_on_expiry(symbol, expiry_type, expiry, t=1):
-    try:
-        df = fetch_futures_data_on_expiry(symbol, expiry_type, expiry, False, t)
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_futures_data_on_expiry(symbol, expiry_type, expiry, False, 1)
-
-    if df.empty:
-        df = fetch_futures_data_on_expiry(symbol, expiry_type, expiry, True)
-        insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
-
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
-    insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
-
-
-def get_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, t=1):
-    try:
-        df = fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, t)
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, False, 1)
-
-    if df.empty:
-        df = fetch_futures_data_with_expiry_between(symbol, expiry_type, start_date, end_date, True)
-        insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
-
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
-    insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
-
-
-def get_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, t = 1):
-    try:
-        df = fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False, t)
-
-        if not df.empty:
-            print("-----------------------------------------------------------------")
-            return df
-        else:
-            raise f"empty data returned from local database for {t}min timeframe"
-    except:
-        df = fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, False)
-    if df.empty:
-        df = fetch_futures_data_with_timestamps_between(symbol, expiry_type, start_date, end_date, True)
-        insert_data_into_local_database(df, 'ohlcv_future_per_1_minute')
-    df_resampled = Data_Processing.resample_df_to_timeframe(df, t, FNO.FUTURES)
-    # insert_data_into_local_database(df_resampled, f'ohlcv_future_per_{t}_minute')
-    print("-----------------------------------------------------------------")
-    return df_resampled
 
 
 

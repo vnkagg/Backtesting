@@ -174,7 +174,10 @@ def get_real_put_call_data_ohlc_for_trades(symbols, ohlc, dict_options):
 
 
 
-
+def merge_prior_info(df_info, df_to):
+    df_to = df_to.copy()
+    df_to['expiry'] = df_info.groupby(df_info.index)['expiry'].first()
+    return df_to
 
 '''
 processing step for options data
@@ -186,27 +189,39 @@ open, high, low, close = 0, 1, 2, 3
 def process_parse_options(df_options, is_zero_DTE=False, t=1):
     df_options = df_options.copy()
     df_options['date_timestamp'] = pd.to_datetime(df_options['date_timestamp'])
-
     info_needed = ['open', 'high', 'low', 'close']
     # dropping duplicate entries
     df_options = df_options.drop_duplicates(subset=['date_timestamp', 'strike', 'opt_type'], keep='first')
+
+    # print("printing from process_parse_options")
+    # print("raw options timestamps", df_options['date_timestamp'].unique())
+
+
     # processing calls
     df_calls = df_options[(df_options['opt_type'] == 'CE')]
     _, complete_index = fill_df_and_get_continuous_excluding_market_holidays(df_calls, is_zero_DTE, t)
-    df_calls = df_calls.set_index('date_timestamp')
-    df_calls = [convert(df_calls, complete_index, info) for info in info_needed]
     # ease of access of a calls open close as a function of timestamp and strike
+    df_calls = df_calls.set_index('date_timestamp')
+    df_calls_arr = [convert(df_calls, complete_index, info) for info in info_needed]
+    # print("converted calls timestamps", df_calls_arr[0].index.unique())
     # tracking all the existing strikes that were available for the calls
-    call_strikes = np.sort(np.array(df_calls[0].columns, dtype=int))
+    call_strikes = np.sort(np.array(df_calls_arr[0].columns, dtype=int))
+    df_calls_arr = [merge_prior_info(df_calls, df_calls_ohlc) for df_calls_ohlc in df_calls_arr]
+
+
+
     # processing puts
     df_puts  = df_options[(df_options['opt_type'] == 'PE')]
-    _, complete_index = fill_df_and_get_continuous_excluding_market_holidays(df_puts)
-    df_puts = df_puts.set_index('date_timestamp')
+    _, complete_index = fill_df_and_get_continuous_excluding_market_holidays(df_puts, is_zero_DTE, t)
     # ease of access of a puts open close as a function of timestamp and strike
-    df_puts = [convert(df_puts, complete_index, info) for info in info_needed]
+    df_puts = df_puts.set_index('date_timestamp')
+    df_puts_arr = [convert(df_puts, complete_index, info) for info in info_needed]
     # tracking all the existing strikes that were available for the puts
-    put_strikes = np.sort(np.array(df_puts[0].columns, dtype=int))
-    return df_puts, df_calls, [put_strikes, call_strikes]
+    put_strikes = np.sort(np.array(df_puts_arr[0].columns, dtype=int))
+    df_puts_arr = [merge_prior_info(df_puts, df_puts_ohlc) for df_puts_ohlc in df_puts_arr]
+
+    # tracking all the existing strikes that were available for the puts
+    return df_puts_arr, df_calls_arr, [put_strikes, call_strikes]
 
 
 
@@ -320,10 +335,8 @@ class Trades:
             self.tradesDict[token_id].append(obj)
 
 class ticker:
-    def __init__(self, symbol, df_futures, df_options, is_index, components, is_component, weight, t = 1, look_back_window = 5*25*4, is_zero_DTE = False):
+    def __init__(self, symbol, df_futures, df_options, is_index, components, is_component, weight, lot_size_options, lot_size_futures, t = 1, look_back_window = 5*25*4, is_zero_DTE = False):
         self.symbol = symbol
-        self.expiry_futures = df_futures['expiry'].iloc[0]
-        self.expiry_options = df_options['expiry'].iloc[0]
         self.resampling_timeframe = t
         self.expiry_type_futures = df_futures['expiry_type'].iloc[0]
         self.expiry_type_options = df_options['expiry_type'].iloc[0]
@@ -339,10 +352,12 @@ class ticker:
         self.last_trade = None
         self.tokens = {}
         self.Trades = Trades()
-        self.hedging = pd.DataFrame(columns = ['date_timestamp', 'lots', 'futures_price', 'delta_added'])
+        self.hedging = pd.DataFrame(columns = ['date_timestamp', 'lots', 'position', 'futures_price', 'delta_added'])
         self.hedging.set_index('date_timestamp', inplace=True)
         self.net_futures_delta = 0
         self.ohlc = OHLC.close
+        self.lot_size_options = lot_size_options
+        self.lot_size_futures = lot_size_futures
 
     def set_ohlc(self, ohlc):
         self.ohlc = ohlc
@@ -400,6 +415,7 @@ class ticker:
             leg_obj = {'PriceLeg': PriceLeg, 'StrikeLeg': StrikeLeg, 'OptTypeLeg': leg['opt_type'],
                        'MoneynessLeg': leg['moneyness'], 'PositionLeg': leg['position'], 'LotsLeg': leg['lots']}
             legs_objects.append(leg_obj)
+            # print(f"PRINTING FROM DP.TICKER. {self.symbol} lots: {leg['lots']}")
         self.Trades.make_trade(timestamp, *legs_objects)
         return
 
@@ -450,13 +466,13 @@ class ticker:
             atm_put_strike, _ = self.find_moneyness_strike(timestamp, 0, Option.Put)
             futures_price = self.df_futures.loc[timestamp, self.ohlc.name]
 
+            self.df_futures.loc[timestamp, 'iv'] = 0
             if pd.isna(futures_price) or futures_price <= 0:
                 print(f"Skipping {timestamp}: Invalid futures price {futures_price}")
                 continue
 
             call_price = self.get_opts(Option.Call).loc[timestamp, atm_call_strike]
             put_price = self.get_opts(Option.Put).loc[timestamp, atm_put_strike]
-
             try:
                 greeks_call = get_greeks(
                     futures_price / 100,
@@ -465,7 +481,7 @@ class ticker:
                     0.1,
                     0,
                     pd.to_datetime(timestamp).date(),
-                    pd.to_datetime(self.expiry_options).date(),
+                    pd.to_datetime(self.get_opts(Option.Call).loc[timestamp, 'expiry']).date(),
                     Option.Call
                 )
                 greeks_put = get_greeks(
@@ -475,7 +491,7 @@ class ticker:
                     0.1,
                     0,
                     pd.to_datetime(timestamp).date(),
-                    pd.to_datetime(self.expiry_options).date(),
+                    pd.to_datetime(self.get_opts(Option.Put).loc[timestamp, 'expiry']).date(),
                     Option.Put
                 )
                 iv_calculated_from_call = greeks_call['implied_volatility']
@@ -511,6 +527,7 @@ class ticker:
         futures_price = self.df_futures.loc[timestamp, self.ohlc.name] / 100
         strike = float(strike)
         options_price = self.get_opts(opt_type).loc[timestamp, strike] / 100
+        expiry = self.get_opts(opt_type).loc[timestamp, 'expiry']
         try:
             greeks = get_greeks(
                 futures_price,
@@ -519,26 +536,28 @@ class ticker:
                 0.1,
                 0,
                 pd.to_datetime(timestamp).date(),
-                pd.to_datetime(self.expiry_options).date(),
+                pd.to_datetime(expiry).date(),
                 opt_type)
             return greeks
         except Exception as e:
             print(f"{self.symbol}'s error at {timestamp} FROM dp.ticker.greeks: {e}")
+            print(f"dates from dp.ticker.greeks: {pd.to_datetime(timestamp).date(), pd.to_datetime(expiry).date()}")
 
     def update_token(self, key, token):
         self.tokens[key] = token
+    #
+    # def get_net_delta(ticker, timestamp):
+    #     net_delta = 0
+    #     for _, token in ticker.tokens.items():
+    #         net_delta += token.stats.loc[timestamp, f'net_delta'] * ticker.lot_size_options
+    #     net_delta += ticker.net_futures_delta
+    #     return net_delta
 
-    def get_net_delta(self, timestamp):
-        net_delta = 0
-        for _, token in self.tokens:
-            net_delta += token.stats.loc[timestamp, f'net_delta']*ticker.lot_size_options
-        net_delta += self.net_futures_delta
-        return net_delta
-
-    def hedge_futures_trade(self, lots, timestamp):
+    def hedge_futures_trade(self, lots, position, timestamp):
         self.hedging.loc[timestamp, 'lots'] = lots
-        self.hedging.loc[timestamp, 'price'] = self.get_futures_price(timestamp)
-        delta_added = lots*self.lot_size_futures
+        self.hedging.loc[timestamp, 'position'] = position
+        self.hedging.loc[timestamp, 'futures_price'] = self.get_futures_price(timestamp)
+        delta_added = lots * self.lot_size_futures * position.value
         self.hedging.loc[timestamp, 'delta_added'] = delta_added
         self.net_futures_delta += delta_added
 
