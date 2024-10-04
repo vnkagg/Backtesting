@@ -63,7 +63,7 @@ def resample_df_to_timeframe(df, t, fno):
 
 
 
-def get_market_valid_days(all_days, market_holidays_csv_path = r".\exchange_holidays.csv"):
+def get_market_valid_days(all_days, market_holidays_csv_path = r"C:\Users\vinayak\Desktop\Backtesting\exchange_holidays.csv"):
     market_holidays_df = pd.read_csv(market_holidays_csv_path, parse_dates=['holiday_date'])
     market_holidays = market_holidays_df['holiday_date'].dt.date.tolist()
     trading_holidays = pd.Series(all_days).apply(lambda x: pd.to_datetime(x).date() in market_holidays)
@@ -80,7 +80,7 @@ removes all the non-trading days from this range using market holidays data prov
 if 0DTE, then keeps only the dates having a trade in the dataframe
 fills all the minutes in those days using forward fill
 '''
-def fill_df_and_get_continuous_excluding_market_holidays(df, is_zero_DTE = False, t = 1, market_holidays_csv_path = r".\exchange_holidays.csv"):
+def fill_df_and_get_continuous_excluding_market_holidays(df, is_zero_DTE = False, t = 1, market_holidays_csv_path = r"C:\Users\vinayak\Desktop\Backtesting\exchange_holidays.csv"):
     # reading the market holidays from the list provided to us
     df = df.copy()
     # generating a range of all the dates that exists from the first date to the last date

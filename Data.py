@@ -12,7 +12,7 @@ host = "192.168.2.23"
 port = 5432
 user = "amt"
 dbname = "qdap_test"
-local_database = "database.db"
+local_database = r"C:\Users\vinayak\Desktop\Backtesting\database.db"
 
 def make_connection_to_db(qdap):
     if qdap:
