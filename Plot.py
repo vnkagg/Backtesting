@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 def plot_df(df, *columns, fig=None, show=False):
     colors = ['red', 'blue', 'green', 'orange', 'purple', 'cyan', 'magenta']
-
+    df = df.copy()
     if fig is None:
         fig = go.Figure()
 
@@ -10,6 +10,8 @@ def plot_df(df, *columns, fig=None, show=False):
         df['ix'] = range(1, len(df) + 1)
 
     for i, column in enumerate(columns):
+        # df[column] = df[column].apply(lambda x: None if x == 0 else x)
+
         # Create hovertext that shows both the label and the value
         hovertext = [f"{column}: {val}<br>{index.strftime('%Y-%m-%d %H:%M:%S')}"
                      for val, index in zip(df[column], df.index)]
@@ -63,7 +65,7 @@ def draw_horizontal_line(fig, y, x0, x1, color='Red'):
         type="line",
         x0=x0, x1=x1,
         y0=y, y1=y,
-        line=dict(color=color, width=2, dash="dash"),
+        line=dict(color=color, width=0.5, dash="dash"),
         name=f"{y} Line"
     )
     return fig

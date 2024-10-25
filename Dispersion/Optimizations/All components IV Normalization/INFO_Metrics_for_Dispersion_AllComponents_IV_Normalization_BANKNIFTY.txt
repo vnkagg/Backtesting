@@ -1,0 +1,8 @@
+TimeFrame Length: 6 months
+Fundblocked in rs: 1000.0
+Return: -40.92%
+Sharpe: -0.02
+Drawdown: -inf%
+Monthly Profit/Loss Ratio: 0.71
+Win Ratio: 0.12
+Longest Winning Streak: 67, Longest Losing Streak: 468

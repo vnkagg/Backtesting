@@ -1,0 +1,178 @@
+Normallizing IV horizontally using Near and Next month options
+2023-07-03 09:15:00
+> BANKNIFTY
+>>  IV Near: 0.12468356083613075 || IV Next: 0.0
+>>  Expiry Near: 2023-07-27 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 24days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.12468356083613075
+> PNB
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> ICICIBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> AUBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> BANKBARODA
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> FEDERALBNK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> IDFCFIRSTB
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> SBIN
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> INDUSINDBK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> HDFCBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> KOTAKBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> BANDHANBNK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> AXISBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+-------------------------------------------------------------
+2023-07-03 09:30:00
+> BANKNIFTY
+>>  IV Near: 0.1311616503568309 || IV Next: 0.12690684997655427
+>>  Expiry Near: 2023-07-27 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 24days || Time to Expiry Next: 59days
+>>  Weight1 Near: 0.8285714285714286 || Weight2 Next: 0.17142857142857137
+>>  Normallized IV = 0.13043225600592634
+> PNB
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> ICICIBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> AUBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> BANKBARODA
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> FEDERALBNK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> IDFCFIRSTB
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> SBIN
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> INDUSINDBK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> HDFCBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> KOTAKBANK
+>>  IV Near: 0.0 || IV Next: 0.0
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+>>  Weight1 Near: 1 || Weight2 Next: 0
+>>  Normallized IV = 0.0
+> BANDHANBNK
+>>  IV Near: 0.3691291731800561 || IV Next: 0.3691291731800561
+>>  Expiry Near: 2023-08-31 14:30:00 || Expiry Next: 2023-08-31 14:30:00
+>>  Time to Expiry Near: 59days || Time to Expiry Next: 59days
+OHLC for BANKNIFTY is set to OHLC.close
+OHLC for PNB is set to OHLC.close
+OHLC for ICICIBANK is set to OHLC.close
+OHLC for AUBANK is set to OHLC.close
+OHLC for BANKBARODA is set to OHLC.close
+OHLC for FEDERALBNK is set to OHLC.close
+OHLC for IDFCFIRSTB is set to OHLC.close
+OHLC for SBIN is set to OHLC.close
+OHLC for INDUSINDBK is set to OHLC.close
+OHLC for HDFCBANK is set to OHLC.close
+OHLC for KOTAKBANK is set to OHLC.close
+OHLC for BANDHANBNK is set to OHLC.close
+OHLC for AXISBANK is set to OHLC.close
+OHLC for BANKNIFTY is set to OHLC.close
+OHLC for PNB is set to OHLC.close
+OHLC for ICICIBANK is set to OHLC.close
+OHLC for AUBANK is set to OHLC.close
+OHLC for BANKBARODA is set to OHLC.close
+OHLC for FEDERALBNK is set to OHLC.close
+OHLC for IDFCFIRSTB is set to OHLC.close
+OHLC for SBIN is set to OHLC.close
+OHLC for INDUSINDBK is set to OHLC.close
+OHLC for HDFCBANK is set to OHLC.close
+OHLC for KOTAKBANK is set to OHLC.close
+OHLC for BANDHANBNK is set to OHLC.close
+OHLC for AXISBANK is set to OHLC.close

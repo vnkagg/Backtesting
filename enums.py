@@ -30,3 +30,4 @@ class OHLC(Enum):
 class FNO(Enum):
     OPTIONS = 0
     FUTURES = 1
+
