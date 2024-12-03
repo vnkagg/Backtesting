@@ -1,0 +1,48 @@
+PNB || weight: 0.91%
+ICICIBANK || weight: 23.03%
+AUBANK || weight: 2.69%
+BANKBARODA || weight: 1.84%
+FEDERALBNK || weight: 1.68%
+IDFCFIRSTB || weight: 1.08%
+SBIN || weight: 11.27%
+INDUSINDBK || weight: 5.58%
+HDFCBANK || weight: 27.04%
+KOTAKBANK || weight: 11.72%
+BANDHANBNK || weight: 1.98%
+AXISBANK || weight: 11.18%
+Number of principal components selected: 2 || Variance explained: 96.89%
+
+Variance Explained by Principal Component 1 = 85.9% || Top contributing stocks:
+  ICICIBANK - Contribution: 0.5857 
+  HDFCBANK - Contribution: 0.5777 
+  AXISBANK - Contribution: 0.376 
+  KOTAKBANK - Contribution: 0.2657 
+  SBIN - Contribution: 0.2509 
+  INDUSINDBK - Contribution: 0.1566 
+  AUBANK - Contribution: 0.0911 
+  BANDHANBNK - Contribution: 0.0775 
+  BANKBARODA - Contribution: 0.0576 
+  FEDERALBNK - Contribution: 0.0501 
+  PNB - Contribution: 0.0486 
+  IDFCFIRSTB - Contribution: 0.0359 
+
+Variance Explained by Principal Component 2 = 7.16% || Top contributing stocks:
+  HDFCBANK - Contribution: 0.7041 
+  AXISBANK - Contribution: 0.6391 
+  ICICIBANK - Contribution: 0.2667 
+  KOTAKBANK - Contribution: 0.1242 
+  FEDERALBNK - Contribution: 0.0598 
+  BANKBARODA - Contribution: 0.0459 
+  INDUSINDBK - Contribution: 0.0345 
+  BANDHANBNK - Contribution: 0.0299 
+  SBIN - Contribution: 0.0277 
+  AUBANK - Contribution: 0.0214 
+  IDFCFIRSTB - Contribution: 0.0159 
+  PNB - Contribution: 0.0015 
+
+Top 5 stocks based on PCA contributions:
+  HDFCBANK || original_weight = 27.04% || weighted importance = 0.55
+  ICICIBANK || original_weight = 23.03% || weighted importance = 0.52
+  AXISBANK || original_weight = 11.18% || weighted importance = 0.37
+  KOTAKBANK || original_weight = 11.72% || weighted importance = 0.24
+  SBIN || original_weight = 11.27% || weighted importance = 0.22
