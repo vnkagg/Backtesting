@@ -1,6 +1,7 @@
 from Modules import Data_Processing as dp
 from Modules import Data as data
 from Modules.enums import LongShort
+from Modules import TradeAndLogics as TL
 import pandas as pd
 import numpy as np
 from Modules.Utility import is_invalid_value
@@ -208,3 +209,22 @@ class RawWeightedPortfolio:
 
     def Symbols(self):
         return self.constituents.keys()
+
+
+class DispersionPTSL(TL.PTSLHandling):
+    def __init__(self, profit_target, stop_loss, *portfolio):
+        super().__init__(profit_target, stop_loss, *portfolio)
+
+    def is_valid(self, timestamp):
+        # if PTSL is active, update to make sure it's correct
+        if self.active_ptsl:
+            self.update_validity(timestamp)
+        return not self.active_ptsl   
+    
+    def update_validity(self, timestamp):
+        if timestamp.date() != self.triggered_at.date():
+            self.reset()
+            print(f"New day, PTSL for Intraday Strategy is resetted")
+
+
+

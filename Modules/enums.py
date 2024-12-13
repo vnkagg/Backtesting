@@ -92,3 +92,15 @@ class Leg:
             return 'Futures'
         else:
             return f'{self.Instrument.name}_{self.Strike}'
+
+    def __str__(self):
+        return (
+            f"Leg(\n"
+            f"  Position={self.Position.name},\n"
+            f"  Lots={self.Lots},\n"
+            f"  Instrument={self.Instrument},\n"
+            f"  Strike={self.Strike},\n"
+            f"  Price={self.Price},\n"
+            f"  LegName='{self.LegName}'\n"
+            f")"
+        )

@@ -82,6 +82,14 @@ def resample_df_to_timeframe(df, t, fno):
     print(f"Successfully resampled data to {t}mins timeframe")
     return df_resampled
 
+
+def trading_minutes_between(t1, t2):
+    daterange = pd.date_range(start=t1.date(), end=t2.date(), freq='B')
+    marketdays = get_market_valid_days(daterange)
+    if(len(marketdays) < 1):
+        return 0
+    return (len(marketdays)-1)*375 + (t2.hour-t1.hour)*60  + (t2.minute-t1.minute)
+
 def get_market_valid_days(all_days, market_holidays_csv_path = r"C:\Users\vinayak\Desktop\Backtesting\Database\exchange_holidays.csv"):
     market_holidays_df = pd.read_csv(market_holidays_csv_path, parse_dates=['holiday_date'])
     market_holidays = market_holidays_df['holiday_date'].dt.date.tolist()

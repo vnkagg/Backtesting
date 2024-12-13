@@ -33,11 +33,13 @@ class Token:
         self.stats['position'] = LongShort.Neutral
         self.slippage = 7.5
         if self.instrument != FNO.FUTURES:
+            # OPTIONS
             self.transaction_costs = 11.5
             self.secDesc = f'{ticker.symbol}_{instrument.name}_{strike}'
             self.stats['instrument'] = self.instrument
             self.data = ticker.get_opts(instrument)[strike]
         else:
+            # FUTURES
             self.transaction_costs = 1.5
             self.secDesc = f'{ticker.symbol}_{instrument.name}'
             self.stats['instrument'] = self.instrument
@@ -167,6 +169,63 @@ class PTSLHandling:
         self.active_ptsl = False
     
 
+
+class Martingale:
+    def __init__(self, min_interval, min_change, max_bet=8):
+        self.lots = 0
+        self.multiplier = 1
+        self.min_change = min_change
+        self.min_interval = min_interval
+        self.data = []
+        self.max_bet = max_bet
+
+    def entry(self, timestamp, lots, position, value):
+        self.last_entry_time = timestamp
+        self.lots += lots
+        self.direction = position.value
+        self.last_entry_value = value
+        self.prev_value = value
+        self.prev_slope = 0
+        self.data.append({'timestamp': timestamp, 'value': value})
+
+    def is_valid(self, timestamp, value):
+        from Modules import Data_Processing as dp
+        if((self.direction) * (value) > self.direction * self.last_entry_value):
+            return False
+        value_shift_check = (self.direction) * (self.last_entry_value - value) >= self.min_change
+        time_shift_check =  dp.trading_minutes_between(self.last_entry_time, timestamp) >= self.min_interval
+        return (value_shift_check and time_shift_check)
+
+    def bet(self, timestamp, value): 
+        self.data.append({'timestamp': timestamp, 'value': value})
+        if not self.is_valid(timestamp, value):
+            return 0
+        lots = 0    
+        curr_slope = value - self.prev_value
+        if (curr_slope * self.prev_slope < 0):
+            self.multiplier *= 2
+            if self.multiplier <= self.max_bet:
+                lots = self.lots * self.multiplier
+                self.last_entry_time = timestamp
+                self.lots += lots
+                self.last_entry_value = value
+        self.prev_value = value
+        self.prev_slope = curr_slope
+        if lots > 0:
+            self.data[-1]['Piled a Bet'] = lots
+        return lots
+
+    def show_history(self, plot=True):
+        df = pd.DataFrame(self.data)
+        df = df.set_index('timestamp')
+        df = df.ffill()
+        df = df.fillna(0)
+        if plot:
+            from Modules import Plot
+            return Plot.plot_df(df, *df.columns)
+        return df
+
+'-v-v-v-v-v-v-v-v-v-v-v- CHECKS/ TRADE INFO/ FLAGS -v-v-v-v-v-v-v-v-v-v-v-'
 def check_existing_position(ticker):
     pos = False
     for _, token in ticker.tokens.items():
@@ -186,6 +245,15 @@ def isLastNdays(timestamp, n, *portfolio):
         expiry = ticker.get_expiry_at(timestamp)
         isLastN = isLastN | ((expiry - timestamp).days <= n)
     return isLastN
+
+'-^-^-^-^-^-^-^-^-^-^-^- CHECKS/ TRADE INFO/ FLAGS -^-^-^-^-^-^-^-^-^-^-^-'
+
+
+
+
+
+
+'-v-v-v-v-v-v-v-v-v-v-v- TRADE EXECUTIONS/ UPDATIONS -v-v-v-v-v-v-v-v-v-v-v-'
 
 def squareoff_ticker(timestamp, remarks, ticker, logging_token_update):
     # time_ix = ticker.timestamps.get_loc(timestamp)
@@ -221,6 +289,55 @@ def squareoff_ticker(timestamp, remarks, ticker, logging_token_update):
         print()
     else:    
         print(f" Did not find any Legs for {ticker.symbol}")
+
+
+def HandleUpdate(ticker, timestamp, remarks, hedge = True, delta_threshold_per_lot = 1e9, hedge_using_syn = True, logging_token_update=True, logging_hedging=True):
+    # time_ix = ticker.timestamps.get_loc(timestamp)
+    print()
+    print(f">> {ticker.symbol}")
+    active_tokens = {}
+    inactive_tokens = {}
+    for key, token in ticker.tokens.items():
+        if token.position.value != 0:
+            active_tokens[key] = token
+        else:
+            inactive_tokens[key] = token
+
+    print(f"  ----- Active Tokens -----")
+    for key, token in active_tokens.items():
+        token.update_df(timestamp, logging_token_update)
+        if not logging_token_update:
+            continue
+        if token.instrument != FNO.FUTURES:
+            print(f"{token.ticker.symbol, token.instrument.name, float(token.strike)} | position = {token.position.name} | Delta (L) = {np.round(token.stats.loc[timestamp, 'net_delta']/ticker.lot_size, 2)} (position accounted) | Lots in position: {token.lots}")
+        else:
+            print(f"{token.ticker.symbol, token.instrument.name}  | position = {token.position.name} | Delta (L) = {np.round(token.stats.loc[timestamp, 'net_delta']/ ticker.lot_size, 2)} | Lots in position: {token.lots}")
+    print(f"  ----- Inactive Tokens -----")
+    for key, token in inactive_tokens.items():
+        token.update_df(timestamp, False)
+        if not logging_token_update:
+            continue
+        if token.instrument != FNO.FUTURES:
+            print(f"{token.ticker.symbol, token.instrument.name, float(token.strike)} | position = {token.position.name}")
+        else:
+            print(f"{token.ticker.symbol, token.instrument.name} | position = {token.position.name}")
+    print(f"  -- Hedging Sanity/Logs --")
+    if hedge:
+        if not check_existing_position(ticker):
+            return
+        if hedge_using_syn:
+            hedge_delta_using_synthetic_futures(timestamp, remarks, ticker, delta_threshold_per_lot, logging_hedging)
+        else:
+            hedge_delta_using_futures(timestamp, remarks, ticker, delta_threshold_per_lot, logging_hedging)
+    print()
+
+
+'-^-^-^-^-^-^-^-^-^-^-^- TRADE EXECUTIONS/ UPDATIONS -^-^-^-^-^-^-^-^-^-^-^-'
+
+
+
+
+
 
 
 def hedge_delta_using_futures(timestamp, remarks, ticker, delta_threshold_per_lot, logging = True):
@@ -275,47 +392,6 @@ def hedge_delta_using_synthetic_futures(timestamp, remarks, ticker, delta_thresh
         print(f"-------  Hedged Delta {ticker.symbol}  -------")
     else:
         print(f"-------  Did not Hedge {ticker.symbol}  -------")
-
-
-def HandleUpdate(ticker, timestamp, remarks, hedge = True, delta_threshold_per_lot = 1e9, hedge_using_syn = True, logging_token_update=True, logging_hedging=True):
-    # time_ix = ticker.timestamps.get_loc(timestamp)
-    print()
-    print(f">> {ticker.symbol}")
-    active_tokens = {}
-    inactive_tokens = {}
-    for key, token in ticker.tokens.items():
-        if token.position.value != 0:
-            active_tokens[key] = token
-        else:
-            inactive_tokens[key] = token
-
-    print(f"  ----- Active Tokens -----")
-    for key, token in active_tokens.items():
-        token.update_df(timestamp, logging_token_update)
-        if not logging_token_update:
-            continue
-        if token.instrument != FNO.FUTURES:
-            print(f"{token.ticker.symbol, token.instrument.name, float(token.strike)} | position = {token.position.name} | Delta (L) = {np.round(token.stats.loc[timestamp, 'net_delta']/ticker.lot_size, 2)} (position accounted) | Lots in position: {token.lots}")
-        else:
-            print(f"{token.ticker.symbol, token.instrument.name}  | position = {token.position.name} | Delta (L) = {np.round(token.stats.loc[timestamp, 'net_delta']/ ticker.lot_size, 2)} | Lots in position: {token.lots}")
-    print(f"  ----- Inactive Tokens -----")
-    for key, token in inactive_tokens.items():
-        token.update_df(timestamp, False)
-        if not logging_token_update:
-            continue
-        if token.instrument != FNO.FUTURES:
-            print(f"{token.ticker.symbol, token.instrument.name, float(token.strike)} | position = {token.position.name}")
-        else:
-            print(f"{token.ticker.symbol, token.instrument.name} | position = {token.position.name}")
-    print(f"  -- Hedging Sanity/Logs --")
-    if hedge:
-        if not check_existing_position(ticker):
-            return
-        if hedge_using_syn:
-            hedge_delta_using_synthetic_futures(timestamp, remarks, ticker, delta_threshold_per_lot, logging_hedging)
-        else:
-            hedge_delta_using_futures(timestamp, remarks, ticker, delta_threshold_per_lot, logging_hedging)
-    print()
 
 
 

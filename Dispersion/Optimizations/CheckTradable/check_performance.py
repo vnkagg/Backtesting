@@ -1,13 +1,12 @@
 
 
 
-import numpy as np
-import pandas as pd
 import os
-import importlib
 import sys
 import copy
-import diskcache
+import importlib
+import numpy as np
+import pandas as pd
 
 
 backtesting_path = r'C:\Users\vinayak\Desktop\Backtesting'
@@ -18,8 +17,6 @@ if backtesting_path not in sys.path:
 # print("path after", sys.path)
 # print()
 
-
-# from scipy.optimize import minimize
 from Modules import Plot
 from Modules import Helpers
 from Modules import Data as data
@@ -27,28 +24,30 @@ from Modules import Utility as util
 from Modules import TradeAndLogics as TL
 from Modules import Data_Processing as dp
 from Modules.enums import Option, LongShort, DB, FNO, Leg, OHLC, PTSL
+import Dispersion.DispersionAdjustedFunctionality as daf
+
+# from scipy.optimize import minimize
 
 
 original_stdout = util.const(sys.stdout)
 original_stdout.value
 
 
-
-# start_date = '2023-07-01' 
-# end_date = '2023-08-01'
-
-
-# start_date = pd.to_datetime(start_date)
-# end_date = pd.to_datetime(end_date)
-
-
-# entry = '2023-10-16 09:15:00'
 entry = input("Enter Entry Time: ")
 entry = pd.to_datetime(entry)
 
-# exit = '2023-10-26 11:30:00'
 exit = input("Enter Exit Time: ")
 exit = pd.to_datetime(exit)
+
+
+
+ICView = input("Enter Short/ Long IC: ")
+if ICView == "Long":
+    ICView = LongShort.Long
+elif ICView == "Short":
+    ICView = LongShort.Short
+else:
+    raise ValueError(ICView)
 
 from datetime import timedelta
 
@@ -56,14 +55,7 @@ start = pd.to_datetime(entry - timedelta(1))
 end = pd.to_datetime(exit + timedelta(1))
 
 
-ICView = input("Enter Short/ Long IC: ")
-# ICView = 'Long'
-if ICView == "Long":
-    ICView = LongShort.Long
-else:
-    ICView = LongShort.Short
-
-strategy_desc = fr"{entry.strftime('%d%b_%H_%M')}_{exit.strftime('%d%b_%H_%M')}"
+strategy_desc = fr"FROM_{entry.strftime('%Y_%m_%d_h%Hm%M')}__TO_{exit.strftime('%Y_%m_%d_h%Hm%M')}_{entry.strftime('%B')}"
 
 folder_path = fr"C:\Users\vinayak\Desktop\Backtesting\Dispersion\Optimizations\CheckTradable\{strategy_desc}"
 if not os.path.exists(folder_path):
@@ -74,20 +66,21 @@ logs_path = fr'/c/Users/vinayak/Desktop/Backtesting/Dispersion/Optimizations/Che
 file = open(fr'{folder_path}\LOGS_Trading_Logic.txt', 'w', buffering = 1)
 print(f"tail -f {logs_path}")
 
-# notional_vega_buying = 10000
-# notional_vega_selling = 10000 # rs
-notional_vega_buying = int(input("Notional Vega Buy: "))
-notional_vega_selling = int(input("Notional Vega Sell: ")) # rs
+notional_vega_buying = 10000
+notional_vega_selling = 10000 # rs
+profit_target = 10000
+stop_loss = 10000
+# notional_vega_buying = int(input("Notional Vega Buy: "))
+# notional_vega_selling = int(input("Notional Vega Sell: ")) # rs
 # profit_target = int(input("Profit Target: "))
 # stop_loss = int(input("Stop Loss: "))
-profit_target = 100000
-stop_loss = 100000
 
 
 
+ic = pd.read_csv(r'C:\Users\vinayak\Desktop\Backtesting\Dispersion\Optimizations\ICs\IC_NearIV.csv', index_col=0, parse_dates=True)
 
 index_symbol = 'BANKNIFTY'
-expiry_type_near = 'I'
+expiry_type = 'I'
 expiry_type_next = 'II'
 risk_free_rate = 0.1 # (10% interest rate)
 timeframe = 1 # mins
@@ -95,10 +88,10 @@ look_back_window = 25*4
 # Trade/ Strategy Parameters
 buying_delta_threshold_per_lot = 5
 selling_delta_threshold_per_lot = 1
-zscore_threshold_long = 2
-zscore_threshold_short = -2
-ic_threshold_long = 0.8
-ic_threshold_short = 0.2
+# zscore_threshold_long = 2
+# zscore_threshold_short = -2
+# ic_threshold_long = 0.8
+# ic_threshold_short = 0.2
 epsilon = 0.1
 moneyness_ironfly = 0
 price_factor = 5
@@ -123,7 +116,6 @@ index_lot_size = 15
 
 
 
-import Dispersion.DispersionAdjustedFunctionality as daf
 
 
 basket = daf.RawWeightedPortfolio()
@@ -134,24 +126,33 @@ basket.insert('SBIN', 750, 11.27)
 basket.insert('AXISBANK', 625, 11.18)
 
 
-logs_near = open(fr'{folder_path}\LOGS_Fetching_Near_Month_Data.txt', 'w')
-sys.stdout = logs_near
-constituents_near = {}
+
+
+logs = open(fr'{folder_path}\LOGS_Fetching_Month_Data.txt', 'w')
+sys.stdout = logs
+
+constituents = {}
+
 ohlc = OHLC.close
-index_near = daf.ticker(index_symbol, index_lot_size, True, start.date(), end.date(), expiry_type_near, True, timeframe, True, 0.1)
-index_near.initializeDispersion(constituents_near, False, 1)
-index_near.set_ohlc(ohlc)
-index_near.set_intention(ICView)
+
+index = daf.ticker(index_symbol, index_lot_size, True, start.date(), end.date(), expiry_type, True, timeframe, True, 0.1)
+index.initializeDispersion(constituents, False, 1)
+# index.set_ohlc(ohlc)
+index.set_intention(ICView)
+index.martingale = TL.Martingale(15, 0.03, 8)
+
 for stock in basket.Symbols():
-    constituents_near[stock] = daf.ticker(stock, basket.LotSize(stock), True, start.date(), end.date(), expiry_type_near, True, timeframe, False, 0.1)
-    constituents_near[stock].initializeDispersion({}, True, basket.Weight(stock))
-    constituents_near[stock].set_ohlc(ohlc)
-    constituents_near[stock].set_intention(ICView.opposite())
+    constituents[stock] = daf.ticker(stock, basket.LotSize(stock), True, start.date(), end.date(), expiry_type, True, timeframe, False, 0.1)
+    constituents[stock].initializeDispersion({}, True, basket.Weight(stock))
+    # constituents[stock].set_ohlc(ohlc)
+    constituents[stock].set_intention(ICView.opposite())
+    constituents[stock].martingale = TL.Martingale(15, 0.03, 8)
+
 sys.stdout = original_stdout.value
-logs_near.close()
+logs.close()
 
 
-index = copy.deepcopy(index_near)
+index = copy.deepcopy(index)
 portfolio = [index, *[component for component in index.components.values()]]
 
 def get_vega_legs(ticker, timestamp, *Legs):
@@ -169,6 +170,7 @@ def entry_signal(timestamp):
     if timestamp == entry:
         return True
     return False
+
 def exit_signal(timestamp):
     if TL.isTodayAnyExpiry(timestamp, *portfolio):
         return True
@@ -217,6 +219,7 @@ def get_lots_for_entry(ticker, timestamp, **kwargs):
     return lots_ticker
 
 
+
 def take_dispersion_position(timestamp, remarks, ticker, lots):
     legs = []
     legs = Helpers.get_legs_ironfly_WithFarOptionsOfPrice_ATMpriceXfactor(ticker, timestamp, lots, ticker.intention, price_factor)
@@ -229,21 +232,6 @@ def take_dispersion_position(timestamp, remarks, ticker, lots):
     ticker.take_position(timestamp, remarks, *legs)
 
 
-class DispersionPTSL(TL.PTSLHandling):
-    def __init__(self, profit_target, stop_loss, *portfolio):
-        super().__init__(profit_target, stop_loss, *portfolio)
-
-    def is_valid(self, timestamp):
-        # if PTSL is active, update to make sure it's correct
-        if self.active_ptsl:
-            self.update_validity(timestamp)
-        return not self.active_ptsl   
-    
-    def update_validity(self, timestamp):
-        if timestamp.date() != self.triggered_at.date():
-            self.reset()
-            print(f"New day, PTSL for Intraday Strategy is resetted")
-        
 
 def squareoff(timestamp, remarks, logging_token_update = True):
     print("************  SQUARE OFF BEGINS  *********** ")
@@ -266,7 +254,6 @@ def zoom_dispersion_trade(start, end, file_name):
     performance = Helpers.zoom_tokens_performance_bar_by_bar(*portfolio, start=start, end=end)
     Plot.save_df_to_excel(performance, file_name)
 
-ic = pd.read_csv(r'C:\Users\vinayak\Desktop\Backtesting\Dispersion\Optimizations\ICs\IC_NormallizedIV_Filled.csv', index_col=0, parse_dates=True)
 
 
 def visualise_dispersion_trade(start, end, file_name):
@@ -293,7 +280,7 @@ sys.stdout = file
 for ticker in portfolio:
     ticker.reset_trades()
 
-TrackPTSL = DispersionPTSL(profit_target, stop_loss, *portfolio)
+TrackPTSL = daf.DispersionPTSL(profit_target, stop_loss, *portfolio)
 timestamps = index.timestamps
 current_position = None
 trade_start_date, trade_end_date, trade_count = None, None, 0
@@ -327,9 +314,15 @@ for timestamp in timestamps:
             zoom_dispersion_trade(trade_start_date, trade_end_date, fr"{folder_path}\Zoom_Trade.xlsx")
             visualise_dispersion_trade(trade_start_date, trade_end_date, fr"{folder_path}\Visualise_Trade.html")
             continue
-            
+        
         # IF NO NEED TO SQUAREOFF, HEDGE IF NEEDED
         UpdateDispersionTickers(timestamp, 'Delta Hedging using Synthetic Futures', True, True, True)
+        
+        for ticker in portfolio:
+            lots_ticker = ticker.martingale.bet(timestamp, ic.loc[timestamp, 'ic'])
+            if lots_ticker:
+                take_dispersion_position(timestamp, f'Martingale Bet {ticker.martingale.multiplier}x', ticker, lots_ticker)            
+        
         print("========================================================================================================================================================================")
         continue
     #######################################################################################################################################################
@@ -354,6 +347,7 @@ for timestamp in timestamps:
                 ticker.set_intention(ICView.opposite())
             lots_ticker = get_lots_for_entry(ticker, timestamp)
             take_dispersion_position(timestamp, f'{ICView.name} IC', ticker, lots_ticker)
+            ticker.martingale.entry(timestamp, lots_ticker, ICView, ic.loc[timestamp, 'ic'])
 
         TrackPTSL.fresh_trade(timestamp)
         current_position = ICView

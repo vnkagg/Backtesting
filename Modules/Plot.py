@@ -20,6 +20,7 @@ def plot_df(df, *columns, **kwargs):
         '#EDC948',  # Soft mustard
     ]
     import pandas as pd
+    import numpy as np
     df = df.where(pd.notna(df), None)
     # Ensure 'ix' column exists for indexing if necessary
     if 'ix' not in df.columns:
@@ -44,6 +45,9 @@ def plot_df(df, *columns, **kwargs):
         f"{label_x}: {index}" for index in df.index
     ]
     
+
+
+
     fig.add_trace(go.Scatter(
         x=df['ix'],
         y=[0]*len(df),
@@ -54,12 +58,19 @@ def plot_df(df, *columns, **kwargs):
         hovertext=hovertext  # Custom hover text with timestamp and value
     ))
     for i, column in enumerate(columns):
+        data = df[column]
+        
+        abs_max = np.nanmax(np.abs(data)) if len(data.dropna()) > 0 else 1
+        if abs_max >= 1:
+            decimals = 2  # Default for values >= 1
+        else:
+            decimals = int(abs(np.floor(np.log10(abs_max)))) + 2  # Handle small numbers dynamically
+        
         # Create custom hovertext to show timestamp and column value
         hovertext = [
-            f"{column}: {value:.2f}" if pd.notna(value) else ""
+            f"{column}: {value:.{decimals}f}" if pd.notna(value) else ""
             for index, value in zip(df.index, df[column])
         ]
-        
         fig.add_trace(go.Scatter(
             x=df['ix'],
             y=df[column],
