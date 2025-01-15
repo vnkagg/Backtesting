@@ -9,6 +9,7 @@ class Token:
         self.timestamps = ticker.timestamps
         self.lot_size = self.ticker.lot_size
         self.instrument = instrument
+        self.expiry = None
         self.strike = strike
         self.legname = legname
         self.instrument = instrument
@@ -40,7 +41,7 @@ class Token:
             self.data = ticker.get_opts(instrument)[strike]
         else:
             # FUTURES
-            self.transaction_costs = 1.5
+            self.transaction_costs = 2.5
             self.secDesc = f'{ticker.symbol}_{instrument.name}'
             self.stats['instrument'] = self.instrument
             self.data = ticker.df_futures[ticker.ohlc.name]
@@ -50,6 +51,8 @@ class Token:
         return transaction_value * (self.slippage + self.transaction_costs) * 0.01 * 0.01
 
     def add_position(self, timestamp, lots, position):
+        if self.expiry == None:
+            self.expiry = self.ticker.get_expiry(timestamp)
         updated_net_lots = self.lots * self.position.value + lots * position.value
         self.lots = abs(updated_net_lots)
         self.position = LongShort(np.sign(updated_net_lots))
@@ -160,7 +163,7 @@ class PTSLHandling:
             return self.nature
         if net_profit <= -self.stop_loss:
             self.trigger(timestamp)
-            self.nature = PTSL.Valid
+            self.nature = PTSL.StopLoss
             self.pnl_last_trade = net_profit
             return self.nature
         return PTSL.Valid

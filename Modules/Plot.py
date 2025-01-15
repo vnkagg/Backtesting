@@ -59,8 +59,9 @@ def plot_df(df, *columns, **kwargs):
     ))
     for i, column in enumerate(columns):
         data = df[column]
-        
-        abs_max = np.nanmax(np.abs(data)) if len(data.dropna()) > 0 else 1
+        data = data.dropna()
+        abs_max = np.max(np.abs(data)) if len(data) > 0 else 1
+        # abs_max = np.abs(np.nanmax(data)) if len(data.dropna()) > 0 else 1
         if abs_max >= 1:
             decimals = 2  # Default for values >= 1
         else:
@@ -116,6 +117,26 @@ def draw_horizontal_line(fig, y, x0, x1, color='Red', width=0.8):
     )
     return fig
 
+import plotly.graph_objects as go
+
+def draw_vertical_line(fig, x, y0, y1, color='White', width=1.2):
+    fig.add_shape(
+        type="line",
+        x0=x, x1=x,  # Vertical line at the timestamp
+        y0=y0, y1=y1,
+        line=dict(color=color, width=width, dash="dash"),
+    )
+
+    # Add an invisible scatter point for hover effect at the vertical line
+    fig.add_trace(go.Scatter(
+        x=[x],
+        y=[(y0 + y1) / 2],  # Place the hover point in the middle of the line
+        mode='markers',
+        marker=dict(size=1, color='rgba(0,0,0,0)'),  # Invisible marker
+        hoverinfo='text',
+    ))
+
+    return fig
 
 def save_plot(fig, filename):
     import plotly.io as pio

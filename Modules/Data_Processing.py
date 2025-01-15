@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import QuantLib as ql
 from collections import deque
-from Modules.enums import Option, LongShort, DB, GreeksParameters, Leg, FNO, OHLC
+from Modules.enums import Option, LongShort, DB, GreeksParameters, Leg, FNO, OHLC, Phase
 from Modules.Utility import is_invalid_value
 
 
@@ -40,6 +40,38 @@ def get_closest_index_binary_search(array, target):
 
 
 
+# There are instances of same contract traded multiple times 
+# with different volumes at same timestamp
+def aggregate_df(df, fno):
+    df = df.copy()
+    df = drop_duplicates_from_df(df)
+    # df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
+    # df.set_index('date_timestamp', inplace=True)
+    
+    # Define aggregation rules for OHLCV columns
+    aggregation_rules = {
+        'open': 'first',
+        'high': 'max',
+        'low': 'min',
+        'close': 'last',
+        'volume': 'sum',
+        'expiry': 'first',
+        'expiry_type': 'first',
+        'symbol': 'first'
+    }
+    
+    # Group by non-OHLCV columns plus 'opt_type' and 'strike' for OPTIONS
+    if fno == FNO.OPTIONS:
+        df_grouped = df.groupby(['date_timestamp', 'opt_type', 'strike']).agg(aggregation_rules)
+    else:
+        # If not OPTIONS, handle other cases or default behavior
+        df_grouped = df.groupby(['date_timestamp']).agg(aggregation_rules)
+    
+    df_grouped = df_grouped.reset_index()
+
+    return df_grouped
+
+
 def resample_df_to_timeframe(df, t, fno):
     df = df.copy()
     df = drop_duplicates_from_df(df)
@@ -55,7 +87,7 @@ def resample_df_to_timeframe(df, t, fno):
         'volume': 'sum',
         'expiry': 'first',
         'expiry_type': 'first',
-        'symbol': 'first',
+        'symbol': 'first'
     }
     
     # Group by non-OHLCV columns plus 'opt_type' and 'strike' for OPTIONS
@@ -124,13 +156,60 @@ def get_date_minus_n_days(start_date, days, include = False):
     print(f"Market Valid arithmetic for {start_date.date().strftime('%d/%b/%Y')} - {days}days = {previous.date().strftime('%d/%b/%Y')} ({nature}including the start_date)")
     return previous
 
+def get_latest_market_valid_day(date):
+    from datetime import timedelta
+    if not isinstance(date, pd.Timestamp):
+        date = pd.to_datetime(date)
+    latest_date = date
+    while not is_market_day(latest_date):
+        latest_date -= timedelta(1)
+    return pd.to_datetime(latest_date)
+
+def get_next_market_valid_day(date):
+    from datetime import timedelta
+    if not isinstance(date, pd.Timestamp):
+        date = pd.to_datetime(date)
+    latest_date = date
+    while not is_market_day(latest_date):
+        latest_date += timedelta(1)
+    return pd.to_datetime(latest_date)
+
+def get_nearest_market_valid_day(date, phase):
+    from datetime import timedelta
+    if not isinstance(date, pd.Timestamp):
+        date = pd.to_datetime(date)
+    latest_date = date
+    while not is_market_day(latest_date):
+        latest_date += timedelta(1) * phase.value
+    return pd.to_datetime(latest_date)
+
+def isLastNdays(timestamp, n, *portfolio, **kwargs):
+    isLastN = False
+    trading_days = True
+    general_days = False 
+    if 'trading' in kwargs:
+        trading_days=True
+        general_days=False
+    if 'general' in kwargs:
+        general_days=True
+        trading_days=False
+    for ticker in portfolio:
+        expiry = ticker.get_expiry(timestamp)
+        boolean = False
+        if trading_days:
+            boolean = trading_minutes_between(timestamp, expiry)/375 <= n
+        if general_days:
+            (expiry - timestamp).days <= n
+        isLastN = isLastN | boolean
+    return isLastN
+
 '''
-Reads all the market holidays from the csv provided to us
-takes the start and end date from the data frame
-creates a range of all business days between the start and end date
-removes all the non-trading days from this range using market holidays data provided to us
-if 0DTE, then keeps only the dates having a trade in the dataframe
-fills all the minutes in those days using forward fill
+1. Takes the start and end date from the data frame
+2. creates a range of all business days between the start and end date
+3. Reads all the market holidays from the exchange holidays
+4. removes all the non-trading days from this range using market holidays data provided to us
+5. if 0DTE, then keeps only the dates having a trade in the dataframe
+6. fills all the minutes in those days using forward fill
 '''
 def get_continuous_excluding_market_holidays(df, is_zero_DTE = False, t = 1, market_holidays_csv_path = r"C:\Users\vinayak\Desktop\Backtesting\Database\exchange_holidays.csv"):
     # reading the market holidays from the list provided to us
@@ -144,6 +223,8 @@ def get_continuous_excluding_market_holidays(df, is_zero_DTE = False, t = 1, mar
         end_date = df.index[-1]
     else:
         raise ValueError("Date Timestamp Information not provided")
+    start_date = pd.to_datetime(start_date).date()
+    end_date = pd.to_datetime(end_date).date()
     all_days = pd.date_range(start=start_date, end=end_date, freq='B')
     # mask for the invalid days
     trading_days = get_market_valid_days(all_days, market_holidays_csv_path)
@@ -160,10 +241,8 @@ def get_continuous_excluding_market_holidays(df, is_zero_DTE = False, t = 1, mar
         if 'date_timestamp' in df.columns:
             df = df.set_index('date_timestamp')
             df = df.reindex(complete_index)
-            df = df.ffill()
         elif isinstance(df.index, pd.DatetimeIndex):
             df = df.reindex(complete_index)
-            df = df.ffill()
         else:
             raise ValueError("Date Timestamp Information not provided")
     except:
@@ -179,19 +258,31 @@ fills and makes continuous
 '''
 def process_parse_futures(df_futures, is_zero_DTE=False, t=1, toFill = True, isEod = False):
     df_futures = df_futures.copy()
-    # if not isEod:
-    #     df_futures = resample_df_to_timeframe(df_futures, t, FNO.FUTURES)
-    # dropping duplicate entries
+    df_futures = drop_duplicates_from_df(df_futures)
     df_futures['date_timestamp'] = pd.to_datetime(df_futures['date_timestamp'])
+    df_futures['expiry'] = pd.to_datetime(df_futures['expiry'])
+    df_futures = fill_expiry(df_futures, False)
+    if df_futures['expiry_type'].iloc[0] == 'I':
+        df_futures['days_to_expiry'] = abs((df_futures['expiry'] - df_futures['date_timestamp']))
+        df_futures = df_futures.loc[df_futures.groupby('date_timestamp')['days_to_expiry'].idxmin()]
+        df_futures = df_futures.drop(columns=['days_to_expiry'])
+        # df_futures = df_futures[df_futures['date_timestamp'].dt.month == df_futures['expiry'].dt.month]
+    if not isEod:
+        if t == 1:
+            df_futures = aggregate_df(df_futures, FNO.FUTURES)
+        else:
+            df_futures = resample_df_to_timeframe(df_futures, t, FNO.FUTURES)
+    # dropping duplicate entries
     # made continuous data if there were some discontinuity in the available data
     if not isEod:
         _, complete_index = get_continuous_excluding_market_holidays(df_futures, is_zero_DTE, t)
+    # df_futures['date_timestamp'] = pd.to_datetime(df_futures['date_timestamp'])
     df_futures = drop_duplicates_from_df(df_futures)
     df_futures.set_index('date_timestamp', inplace=True)
     df_futures = df_futures.sort_index()
     if df_futures.index.duplicated().any():
         print("Duplicates found after setting index:", df_futures.index[df_futures.index.duplicated()])
-    df_futures['expiry'] = pd.to_datetime(df_futures['expiry'])
+    # df_futures['expiry'] = pd.to_datetime(df_futures['expiry'])
     if not isEod:
         df_futures = df_futures.reindex(complete_index)
     df_futures['date'] = df_futures.index.date
@@ -199,7 +290,7 @@ def process_parse_futures(df_futures, is_zero_DTE=False, t=1, toFill = True, isE
     df_futures['expiry_type'] = df_futures['expiry_type'].bfill()
     df_futures = fill_expiry(df_futures)
     if toFill:
-        df_futures = df_futures.groupby('expiry', group_keys=False).apply(lambda contract: contract.ffill())
+        df_futures = df_futures.groupby('date', group_keys=False).apply(lambda contract: contract.ffill().bfill())
     return df_futures
 
 '''
@@ -211,9 +302,20 @@ open, high, low, close = 0, 1, 2, 3
 '''
 def process_parse_options(df_options, is_zero_DTE=False, t=1, toFill = True):
     # df_options = df_options.copy()
-    df_options['date_timestamp'] = pd.to_datetime(df_options['date_timestamp'])
-    # df_options = resample_df_to_timeframe(df_options, t, FNO.OPTIONS)
     df_options = drop_duplicates_from_df(df_options)
+    df_options['date_timestamp'] = pd.to_datetime(df_options['date_timestamp'])
+    df_options['expiry'] = pd.to_datetime(df_options['expiry'])
+    df_options = fill_expiry(df_options, False)
+    if df_options['expiry_type'].iloc[0] == 'I':
+        df_options['days_to_expiry'] = abs((df_options['expiry'] - df_options['date_timestamp']))
+        df_options = df_options.loc[df_options.groupby(['date_timestamp', 'opt_type', 'strike'])['days_to_expiry'].idxmin()]
+        df_options = df_options.drop(columns=['days_to_expiry'])
+    if t == 1:
+        df_options = aggregate_df(df_options, FNO.OPTIONS)
+    else:
+        df_options = resample_df_to_timeframe(df_options, t, FNO.OPTIONS)
+
+    # df_options = drop_duplicates_from_df(df_options)
     info_needed = ['open', 'high', 'low', 'close']
 
     
@@ -232,12 +334,11 @@ def process_parse_options(df_options, is_zero_DTE=False, t=1, toFill = True):
     df_calls = df_calls.set_index('date_timestamp')
     df_calls = df_calls.sort_index()
     df_calls_arr = [pivot(df_calls, complete_index, info, True) for info in info_needed]
+    if toFill:
+        df_calls_arr = [df.groupby('date', group_keys=False).apply(lambda contract : contract.ffill().bfill()) for df in df_calls_arr]
     for df in df_calls_arr:
         df['expiry'] = df_calls.groupby(df_calls.index)['expiry'].first()
-
     df_calls_arr = [fill_expiry(df_calls_ohlc) for df_calls_ohlc in df_calls_arr]
-    if toFill:
-        df_calls_arr = [df.groupby('expiry', group_keys=False).apply(lambda contract : contract.ffill()) for df in df_calls_arr]
 
 
     # processing puts
@@ -254,11 +355,11 @@ def process_parse_options(df_options, is_zero_DTE=False, t=1, toFill = True):
     df_puts = df_puts.sort_index()
     df_puts_arr = [pivot(df_puts, complete_index, info, True) for info in info_needed]
     # tracking all the existing strikes that were available for the puts
+    if toFill:
+        df_puts_arr = [df.groupby('date', group_keys=False).apply(lambda contract : contract.ffill().bfill()) for df in df_puts_arr]
     for df in df_puts_arr:
         df['expiry'] = df_puts.groupby(df_puts.index)['expiry'].first()
     df_puts_arr = [fill_expiry(df_puts_ohlc) for df_puts_ohlc in df_puts_arr]
-    if toFill:
-        df_puts_arr = [df.groupby('expiry', group_keys=False).apply(lambda contract : contract.ffill()) for df in df_puts_arr]
 
 
     expiry_date_map = {}
@@ -277,20 +378,25 @@ A FUNCTION FOR CONVERTING THE OPTIONS DATA INTO A FORMAT WHERE
 YOU CAN DIRECTLY ACCESS THE OHLC PRICE OF A CALL/PUT IN O(1). 
 HERE EACH ROW REPRESENTS A TIMESTAMP AND EACH COLUMN IS A DIFFERENT STRIKE
 '''
-def pivot(df, complete_index, ohlc, flag=True, toFill = True):
+def pivot(df, complete_index, ohlc, flag=True, toFill=True):
     if type(ohlc) == int:
         ohlc = ["open", "high", "low", "close"][ohlc]
     df = df.copy()
-    df = df.pivot(columns='strike', values=ohlc)
+    df = df.pivot(columns='strike', values=ohlc)  # Perform pivot
     if flag:
-        df = df.reindex(complete_index)
+        df = df.reindex(complete_index)  # Align to complete_index
+    df['date'] = df.index.date
     return df
 
-def fill_expiry(df):
+
+def fill_expiry(df, TimestampIsIndex=True):
     df = df.copy()
     df['expiry'] = df['expiry'].ffill()
     df['expiry'] = df['expiry'].bfill()
-    df.loc[pd.to_datetime(df['expiry']).dt.date < (df.index).date, 'expiry'] = None
+    if TimestampIsIndex:
+        df.loc[pd.to_datetime(df['expiry']).dt.date < (df.index).date, 'expiry'] = None
+    else:
+        df.loc[pd.to_datetime(df['expiry']).dt.date < (pd.to_datetime(df['date_timestamp']).dt.date), 'expiry'] = None
     df['expiry'] = df['expiry'].bfill()
     df['expiry'] = df['expiry'].ffill()
     return df
@@ -513,15 +619,6 @@ class ticker:
             if FetchData[1] == True:
                 self.InitializeOptionsData()
 
-    def initializeFNOdata(self):
-        from Modules import Data as data
-        self.df_futures = data.get_futures_data_with_timestamps_between(self.symbol, self.start_date, self.end_date, self.expiry_type, self.resampling_timeframe)
-        self.df_options = data.get_options_data_with_timestamps_between(self.symbol, self.start_date, self.end_date, self.expiry_type, self.resampling_timeframe)
-        self.df_futures = process_parse_futures(self.df_futures, False, self.resampling_timeframe, self.toFill)
-        self.arr_df_puts, self.arr_df_calls, [self.df_put_strikes, self.df_call_strikes], self.expiry_date_map = process_parse_options(self.df_options, False, self.resampling_timeframe, self.toFill)
-        self.timestamps = self.df_futures.index
-        # self._build_expiry_date_map()
-
     def InitializeFuturesData(self):
         from Modules import Data as data
         self.df_futures = data.get_futures_data_with_timestamps_between(self.symbol, self.start_date, self.end_date, self.expiry_type, self.resampling_timeframe)
@@ -532,6 +629,11 @@ class ticker:
         from Modules import Data as data
         self.df_options = data.get_options_data_with_timestamps_between(self.symbol, self.start_date, self.end_date, self.expiry_type, self.resampling_timeframe)
         self.arr_df_puts, self.arr_df_calls, [self.df_put_strikes, self.df_call_strikes], self.expiry_date_map = process_parse_options(self.df_options, False, self.resampling_timeframe, self.toFill)
+    
+    def initializeFNOdata(self):
+        from Modules import Data as data
+        self.InitializeFuturesData()
+        self.InitializeOptionsData()
     
     def StartEnd(self, start, end):
         if not isinstance(start, pd.Timestamp):
@@ -582,16 +684,26 @@ class ticker:
         print("Timestamp does not exist in the given data. Strike Data not Fetched")
         return None
     
+    def get_strike_gap(self):
+        all_strikes = list(self.df_call_strikes.values())[0] + list(self.df_put_strikes.values())[0]
+        all_strikes = pd.Series(all_strikes)
+        return (all_strikes - all_strikes.shift(1)).median()
+    
     def get_opts_price(self, timestamp, opt_type, strike):
         if not isinstance(timestamp, pd.Timestamp):
             timestamp = pd.to_datetime(timestamp)
         options = self.get_opts(opt_type)
         try:
             price = options.loc[timestamp, strike]
-            return price
+            return float(price)
         except Exception as e:
-            print("Error in getting price of the option. Either the timestamp is invalid or strike didn't exist in this period")
-            print(e)
+            print(f"Exception Occured | {e}")
+            if timestamp.time() < pd.Timestamp('09:15').time() or timestamp.time() > pd.Timestamp('15:29').time():
+                raise ValueError(f"Invalid Market Timestamp || {timestamp.time()}")
+            if timestamp.date() > pd.to_datetime(self.end_date).date() or timestamp.date() > pd.to_datetime(self.start_date).date():
+                raise ValueError(f"{timestamp.date()} is not covered in the ticker definition ({pd.to_datetime(self.start_date).date()} to {pd.to_datetime(self.end_date).date()})")
+            if strike not in self.get_strikes(opt_type, timestamp):
+                raise ValueError(f"Not a Valid Strike")             
             raise ValueError("Error in getting price of the option. Either the timestamp is invalid or strike didn't exist in this period")
 
     def inspect(self, timestamp, moneyness_index=0):
@@ -714,7 +826,7 @@ class ticker:
         strikes = np.array(self.get_strikes(opt_type, timestamp))
         strike_index = get_closest_index_binary_search(strikes, underlying_price)
         nearest_strike = strikes[strike_index]
-        return nearest_strike
+        return nearest_strike, strike_index
 
     def find_underlyingPriceMovement_strike(self, timestamp, moneyness_direction, percentage, opt_type):
         if not isinstance(timestamp, pd.Timestamp):

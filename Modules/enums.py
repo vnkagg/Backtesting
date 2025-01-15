@@ -51,6 +51,17 @@ class DB(Enum):
     LocalDB = 1
     GeneralOrQuantiPhi = 2
 
+class Phase(Enum):
+    Past = -1
+    Present = 0
+    Future = 1
+
+class Period(Enum):
+    Daily = "D"
+    Monthly = "ME"
+    Annual = "YE"
+    Complete = ""
+
 class Greeks(Enum):
     Delta = 0
     Gamma = 1
@@ -79,13 +90,14 @@ class Leg:
     Strike: float
     Price: Optional[float] = None
     LegName: Optional[str] = ""
+    LotSize: Optional[float] = None
 
-    def payoff(self, x):
+    def payoff(self, x, lotsize_include=False):
         if self.Instrument == FNO.FUTURES:
-            return (x - self.Price) * self.Lots * self.Position.value
+            return (x - self.Price) * self.Lots * self.Position.value * (1*(1-int(lotsize_include)) + int(lotsize_include)*self.LotSize)
         else:
             intrinsic_value = np.maximum((x - self.Strike) * self.Instrument.value, 0)
-            return (intrinsic_value - self.Price) * self.Lots * self.Position.value
+            return (intrinsic_value - self.Price) * self.Lots * self.Position.value * (1*(1-int(lotsize_include)) + int(lotsize_include)*self.LotSize)
 
     def id(self):
         if self.Instrument == FNO.FUTURES:

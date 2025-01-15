@@ -33,6 +33,16 @@ query_ic = '''
     FROM IC
 '''
 
+query_market_holidays = '''
+    SELECT holiday_date 
+    FROM exchange_holidays;
+'''
+
+def update_market_holidays():
+    df = query_db(DB.QDAP, query_market_holidays)
+    df.to_csv(fr'C:\Users\vinayak\Desktop\Backtesting\Database\exchange_holidays.csv', mode='w')
+
+
 def make_connection_to_db(connect_to):
     if connect_to == DB.QDAP:
         conn = psycopg2.connect(host=host, port=port, user=user_qdap, password=passwod_qdap, dbname=dbname_qdap)
